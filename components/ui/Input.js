@@ -1,74 +1,96 @@
 import React from 'react';
-import { TextInput, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../../constants/theme';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ThemedText from '../ThemedText';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
-export default function Input({
+const Input = ({
   label,
   value,
   onChangeText,
   placeholder,
   secureTextEntry = false,
-  error,
-  multiline = false,
   keyboardType = 'default',
+  autoCapitalize = 'none',
+  icon,
+  error,
+  onBlur,
   style,
-  inputStyle,
   ...props
-}) {
+}) => {
+  const { theme } = useTheme();
+
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.multiline,
-          error && styles.inputError,
-          inputStyle
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        secureTextEntry={secureTextEntry}
-        multiline={multiline}
-        keyboardType={keyboardType}
-        placeholderTextColor="#a3a3a3"
-        {...props}
-      />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {label && <ThemedText style={styles.label}>{label}</ThemedText>}
+
+      <View style={[
+        styles.inputContainer,
+        { borderColor: error ? Colors[theme].error : '#ddd' }
+      ]}>
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={Colors[theme].text}
+            style={styles.icon}
+          />
+        )}
+
+        <TextInput
+          style={[
+            styles.input,
+            { color: Colors[theme].text }
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#999"
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          onBlur={onBlur}
+          {...props}
+        />
+      </View>
+
+      {error && (
+        <ThemedText style={styles.errorText}>{error}</ThemedText>
+      )}
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
-    color: '#374151',
+    fontSize: 16,
+    marginBottom: 8,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 48,
+  },
+  icon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  multiline: {
-    minHeight: 100,
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  inputError: {
-    borderColor: '#ef4444',
+    height: '100%',
   },
   errorText: {
-    color: '#ef4444',
-    fontSize: 12,
+    fontSize: 14,
+    color: Colors.light.error,
     marginTop: 4,
   },
 });
+
+export default Input;

@@ -1,60 +1,74 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
-
-import { useThemeColor } from '@/hooks/useThemeColor';
+import React from 'react';
+import { Text, TextProps, StyleSheet } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
+import Colors from '../constants/Colors';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+  variant?: 'body' | 'title' | 'subtitle' | 'caption' | 'button' | 'headline';
 };
 
-export function ThemedText({
+export default function ThemedText({
   style,
   lightColor,
   darkColor,
-  type = 'default',
-  ...rest
+  variant = 'body',
+  ...props
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+  const { theme } = useTheme();
+  const color = theme === 'light' ? lightColor ?? Colors.light.text : darkColor ?? Colors.dark.text;
 
-  return (
-    <Text
-      style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
-      ]}
-      {...rest}
-    />
-  );
+  // Appliquer les styles en fonction de la variante
+  const variantStyle = (() => {
+    switch (variant) {
+      case 'headline':
+        return styles.headline;
+      case 'title':
+        return styles.title;
+      case 'subtitle':
+        return styles.subtitle;
+      case 'caption':
+        return styles.caption;
+      case 'button':
+        return styles.button;
+      case 'body':
+      default:
+        return styles.body;
+    }
+  })();
+
+  return <Text style={[variantStyle, { color }, style]} {...props} />;
 }
 
 const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
+  headline: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 0.15,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    letterSpacing: 0.15,
   },
-  link: {
-    lineHeight: 30,
+  subtitle: {
     fontSize: 16,
-    color: '#0a7ea4',
+    fontWeight: '600',
+    letterSpacing: 0.15,
+  },
+  body: {
+    fontSize: 14,
+    letterSpacing: 0.25,
+  },
+  caption: {
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  button: {
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 1.25,
+    textTransform: 'uppercase',
   },
 });

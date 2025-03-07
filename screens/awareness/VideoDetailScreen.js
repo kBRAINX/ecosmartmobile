@@ -1,174 +1,173 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
-import { Video } from 'expo-av';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Divider, ActivityIndicator } from 'react-native-paper';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Video } from 'expo-av';
+import ThemedText from '../../components/ThemedText';
+import Button from '../../components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
-import mockData from '../../constants/mockData';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
-export default function VideoDetailScreen({ route, navigation }) {
-  const { videoId } = route.params;
+// Données fictives pour simuler l'API
+const mockVideoData = {
+  id: '1',
+  title: 'Comprendre les différents types de plastiques',
+  description: `Les plastiques sont partout dans notre quotidien, mais tous ne sont pas recyclables de la même façon. Dans cette vidéo, vous apprendrez à identifier les 7 types de plastiques couramment utilisés et comment les recycler correctement.
+
+  Nous couvrirons :
+  - Les symboles de recyclage et ce qu'ils signifient
+  - Quels plastiques sont facilement recyclables
+  - Comment préparer vos plastiques pour le recyclage
+  - Les erreurs courantes à éviter`,
+  videoUrl: 'https://d23dyxeqlo5psv.cloudfront.net/big_buck_bunny.mp4', // Utiliser une vidéo d'exemple d'Expo
+  duration: '5:20',
+  points: 20,
+  hasQuiz: true,
+  relatedVideos: [
+    {
+      id: '2',
+      title: 'Comment composter à la maison',
+      thumbnail: 'https://via.placeholder.com/160x90',
+      duration: '8:45'
+    },
+    {
+      id: '3',
+      title: 'Les erreurs courantes de recyclage',
+      thumbnail: 'https://via.placeholder.com/160x90',
+      duration: '4:15'
+    }
+  ]
+};
+
+export default function VideoDetailScreen() {
+  const { videoId } = useLocalSearchParams();
+  const router = useRouter();
+  const { theme } = useTheme();
   const [video, setVideo] = useState(null);
-  const [relatedVideos, setRelatedVideos] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState({});
   const videoRef = useRef(null);
 
   useEffect(() => {
-    // Charger les données de la vidéo
+    fetchVideoDetails();
+  }, [videoId]);
+
+  const fetchVideoDetails = async () => {
+    // Simuler l'appel API
+    setLoading(true);
     setTimeout(() => {
-      const foundVideo = mockData.awarenessVideos.find(v => v.id === videoId);
-      if (foundVideo) {
-        setVideo(foundVideo);
-
-        // Trouver des vidéos reliées (par tags)
-        const related = mockData.awarenessVideos
-          .filter(v => v.id !== videoId && v.tags.some(tag => foundVideo.tags.includes(tag)))
-          .slice(0, 3);
-
-        setRelatedVideos(related);
-      } else {
-        navigation.goBack();
-      }
-
-      setIsLoading(false);
+      setVideo(mockVideoData);
+      setLoading(false);
     }, 500);
-  }, [videoId, navigation]);
-
-  const handlePlaybackStatusUpdate = (status) => {
-    setIsPlaying(status.isPlaying);
   };
 
-  const toggleLike = () => {
-    setLiked(!liked);
+  const handleStartQuiz = () => {
+    router.push({
+      pathname: '/awareness/quiz',
+      params: { videoId }
+    });
   };
 
-  const goToQuiz = () => {
-    if (video && video.relatedQuizId) {
-      navigation.navigate('Quiz', { screen: 'QuizDetail', params: { quizId: video.relatedQuizId } });
-    }
+  const handleRelatedVideoPress = (relatedVideoId) => {
+    router.push({
+      pathname: `/awareness/videos/${relatedVideoId}`,
+      params: { videoId: relatedVideoId }
+    });
   };
 
-  if (isLoading || !video) {
+  if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#16a34a" />
-      </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ThemedText>Chargement...</ThemedText>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView style={styles.scrollContainer}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors[theme].text} />
+        </TouchableOpacity>
+
         <View style={styles.videoContainer}>
           <Video
             ref={videoRef}
-            source={{ uri: video.videoUrl }}
-            rate={1.0}
-            volume={1.0}
-            isMuted={false}
-            resizeMode="cover"
-            shouldPlay={false}
-            useNativeControls
             style={styles.video}
-            posterSource={{ uri: video.thumbnailUrl }}
-            posterStyle={styles.videoPoster}
-            onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+            source={{ uri: video.videoUrl }}
+            useNativeControls
+            resizeMode="contain"
+            isLooping={false}
+            onPlaybackStatusUpdate={status => setStatus(() => status)}
           />
         </View>
 
         <View style={styles.contentContainer}>
-          <Text style={styles.videoTitle}>{video.title}</Text>
+          <ThemedText style={styles.title}>{video.title}</ThemedText>
 
-          <View style={styles.videoMeta}>
-            <Text style={styles.viewCount}>{video.views.toLocaleString()} vues</Text>
-
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={toggleLike}
-              >
-                <Ionicons
-                  name={liked ? "thumbs-up" : "thumbs-up-outline"}
-                  size={20}
-                  color={liked ? "#16a34a" : "#666"}
-                />
-                <Text style={[
-                  styles.actionText,
-                  liked && { color: "#16a34a" }
-                ]}>
-                  {video.likesCount.toLocaleString()}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.actionButton}>
-                <Ionicons name="share-social-outline" size={20} color="#666" />
-                <Text style={styles.actionText}>Partager</Text>
-              </TouchableOpacity>
+          <View style={styles.metaContainer}>
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={16} color={Colors[theme].primary} />
+              <ThemedText style={styles.metaText}>{video.duration}</ThemedText>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="trophy-outline" size={16} color={Colors[theme].primary} />
+              <ThemedText style={styles.metaText}>{video.points} points</ThemedText>
             </View>
           </View>
 
-          <Divider style={styles.divider} />
+          <ThemedText style={styles.sectionTitle}>Description</ThemedText>
+          <ThemedText style={styles.description}>{video.description}</ThemedText>
 
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{video.description}</Text>
+          {video.hasQuiz && (
+            <View style={styles.quizSection}>
+              <View style={styles.quizCard}>
+                <View style={styles.quizIcon}>
+                  <Ionicons name="help-circle-outline" size={32} color="#fff" />
+                </View>
+                <View style={styles.quizContent}>
+                  <ThemedText style={styles.quizTitle}>Quiz disponible</ThemedText>
+                  <ThemedText style={styles.quizDescription}>
+                    Testez vos connaissances et gagnez des points supplémentaires !
+                  </ThemedText>
+                  <Button
+                    title="Commencer le quiz"
+                    onPress={handleStartQuiz}
+                    style={styles.quizButton}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
 
-          <View style={styles.tags}>
-            {video.tags.map((tag) => (
-              <TouchableOpacity key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>#{tag}</Text>
+          <ThemedText style={styles.sectionTitle}>Vidéos similaires</ThemedText>
+          <View style={styles.relatedVideosContainer}>
+            {video.relatedVideos.map(relatedVideo => (
+              <TouchableOpacity
+                key={relatedVideo.id}
+                style={styles.relatedVideoItem}
+                onPress={() => handleRelatedVideoPress(relatedVideo.id)}
+              >
+                <Image
+                  source={{ uri: relatedVideo.thumbnail }}
+                  style={styles.relatedVideoThumbnail}
+                />
+                <ThemedText style={styles.relatedVideoTitle} numberOfLines={2}>
+                  {relatedVideo.title}
+                </ThemedText>
+                <View style={styles.relatedVideoDuration}>
+                  <Ionicons name="time-outline" size={12} color={Colors[theme].text} />
+                  <ThemedText style={styles.relatedVideoDurationText}>
+                    {relatedVideo.duration}
+                  </ThemedText>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
-
-          <Divider style={styles.divider} />
-
-          <View style={styles.quizSection}>
-            <Ionicons name="school-outline" size={24} color="#16a34a" style={styles.quizIcon} />
-            <View style={styles.quizInfo}>
-              <Text style={styles.quizTitle}>Testez vos connaissances</Text>
-              <Text style={styles.quizDescription}>
-                Répondez aux questions sur cette vidéo et gagnez des points !
-              </Text>
-            </View>
-            <Button
-              mode="contained"
-              onPress={goToQuiz}
-              style={styles.quizButton}
-            >
-              Quiz
-            </Button>
-          </View>
-
-          <Divider style={styles.divider} />
-
-          <Text style={styles.sectionTitle}>Vidéos similaires</Text>
-
-          {relatedVideos.map((relatedVideo) => (
-            <TouchableOpacity
-              key={relatedVideo.id}
-              style={styles.relatedVideoItem}
-              onPress={() => {
-                navigation.setParams({ videoId: relatedVideo.id });
-                setVideo(null);
-                setIsLoading(true);
-              }}
-            >
-              <Image
-                source={{ uri: relatedVideo.thumbnailUrl }}
-                style={styles.relatedVideoThumbnail}
-              />
-              <View style={styles.relatedVideoInfo}>
-                <Text style={styles.relatedVideoTitle} numberOfLines={2}>
-                  {relatedVideo.title}
-                </Text>
-                <Text style={styles.relatedVideoViews}>
-                  {relatedVideo.views.toLocaleString()} vues
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -178,127 +177,129 @@ export default function VideoDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 10,
+    left: 15,
+    zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   videoContainer: {
     width: '100%',
     aspectRatio: 16 / 9,
-    backgroundColor: '#000',
   },
   video: {
     width: '100%',
     height: '100%',
   },
-  videoPoster: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
   contentContainer: {
     padding: 16,
   },
-  videoTitle: {
-    fontSize: 18,
+  title: {
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
   },
-  videoMeta: {
+  metaContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 16,
   },
-  viewCount: {
-    color: '#666',
-  },
-  actions: {
-    flexDirection: 'row',
-  },
-  actionButton: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 16,
+    marginRight: 16,
   },
-  actionText: {
+  metaText: {
+    fontSize: 14,
     marginLeft: 4,
-    color: '#666',
-  },
-  divider: {
-    marginVertical: 16,
+    opacity: 0.7,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    marginTop: 16,
     marginBottom: 8,
   },
   description: {
-    color: '#333',
-    lineHeight: 20,
-  },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 12,
-  },
-  tag: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  tagText: {
-    color: '#64748b',
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 22,
   },
   quizSection: {
+    marginVertical: 20,
+  },
+  quizCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    padding: 12,
-    borderRadius: 8,
   },
   quizIcon: {
-    marginRight: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.light.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  quizInfo: {
+  quizContent: {
     flex: 1,
   },
   quizTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   quizDescription: {
-    fontSize: 12,
-    color: '#666',
-  },
-  quizButton: {
-    backgroundColor: '#16a34a',
-  },
-  relatedVideoItem: {
-    flexDirection: 'row',
+    fontSize: 14,
+    opacity: 0.7,
     marginBottom: 12,
   },
-  relatedVideoThumbnail: {
-    width: 120,
-    height: 68,
-    borderRadius: 4,
+  quizButton: {
+    alignSelf: 'flex-start',
   },
-  relatedVideoInfo: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
+  relatedVideosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  relatedVideoItem: {
+    width: '48%',
+    marginBottom: 16,
+  },
+  relatedVideoThumbnail: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+    marginBottom: 6,
   },
   relatedVideoTitle: {
+    fontSize: 14,
     fontWeight: '500',
     marginBottom: 4,
   },
-  relatedVideoViews: {
+  relatedVideoDuration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  relatedVideoDurationText: {
     fontSize: 12,
-    color: '#666',
+    opacity: 0.7,
+    marginLeft: 4,
   },
 });

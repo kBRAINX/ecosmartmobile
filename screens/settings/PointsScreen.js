@@ -1,195 +1,261 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Button, Divider, ActivityIndicator } from 'react-native-paper';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import mockData from '../../constants/mockData';
+import ThemedText from '../../components/ThemedText';
+import TransactionItem from '../../components/profile/TransactionItem';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
-export default function PointsScreen({ navigation }) {
-  const [user, setUser] = useState(null);
+// Données fictives pour l'historique des points
+const MOCK_TRANSACTIONS = [
+  {
+    id: '1',
+    type: 'earn',
+    title: 'Recyclage de bouteille en plastique',
+    points: 10,
+    date: '2025-03-06T14:30:00Z',
+    category: 'scan'
+  },
+  {
+    id: '2',
+    type: 'earn',
+    title: 'Quiz complété: Les plastiques',
+    points: 20,
+    date: '2025-03-05T10:15:00Z',
+    category: 'quiz'
+  },
+  {
+    id: '3',
+    type: 'spend',
+    title: 'Coupon de réduction acheté',
+    points: -50,
+    date: '2025-03-03T16:45:00Z',
+    category: 'coupon'
+  },
+  {
+    id: '4',
+    type: 'earn',
+    title: 'Recyclage de canette en aluminium',
+    points: 15,
+    date: '2025-03-02T09:20:00Z',
+    category: 'scan'
+  },
+  {
+    id: '5',
+    type: 'earn',
+    title: 'Badge obtenu: 10 scans',
+    points: 30,
+    date: '2025-03-01T11:10:00Z',
+    category: 'badge'
+  },
+  {
+    id: '6',
+    type: 'spend',
+    title: 'Don à l\'association EcoTerre',
+    points: -100,
+    date: '2025-02-28T13:40:00Z',
+    category: 'donation'
+  },
+  {
+    id: '7',
+    type: 'earn',
+    title: 'Recyclage de papier',
+    points: 5,
+    date: '2025-02-27T15:30:00Z',
+    category: 'scan'
+  },
+  {
+    id: '8',
+    type: 'earn',
+    title: 'Participation événement de nettoyage',
+    points: 200,
+    date: '2025-02-25T08:30:00Z',
+    category: 'event'
+  }
+];
+
+export default function PointsScreen() {
+  const router = useRouter();
+  const { theme } = useTheme();
   const [transactions, setTransactions] = useState([]);
+  const [filter, setFilter] = useState('all'); // 'all', 'earn', or 'spend'
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Charger les données de l'utilisateur et les transactions
-    setTimeout(() => {
-      const userData = mockData.users[0];
-      setUser(userData);
-
-      // Filtrer les transactions de l'utilisateur
-      const userTransactions = mockData.transactions.filter(
-        t => t.userId === userData.id
-      );
-      setTransactions(userTransactions);
-
-      setIsLoading(false);
-    }, 500);
+    fetchTransactions();
   }, []);
 
+  useEffect(() => {
+    applyFilter();
+  }, [filter]);
+
+  const fetchTransactions = () => {
+    // Simuler un appel API
+    setIsLoading(true);
+    setTimeout(() => {
+      setTransactions(MOCK_TRANSACTIONS);
+      setIsLoading(false);
+    }, 500);
+  };
+
+  const applyFilter = () => {
+    if (filter === 'all') {
+      setTransactions(MOCK_TRANSACTIONS);
+    } else if (filter === 'earn') {
+      setTransactions(MOCK_TRANSACTIONS.filter(t => t.type === 'earn'));
+    } else if (filter === 'spend') {
+      setTransactions(MOCK_TRANSACTIONS.filter(t => t.type === 'spend'));
+    }
+  };
+
+  // Calculer le total des points gagnés et dépensés
+  const totalEarned = MOCK_TRANSACTIONS
+    .filter(t => t.type === 'earn')
+    .reduce((sum, t) => sum + t.points, 0);
+
+  const totalSpent = MOCK_TRANSACTIONS
+    .filter(t => t.type === 'spend')
+    .reduce((sum, t) => sum + Math.abs(t.points), 0);
+
+  // Groupe les transactions par date (jour)
+  const groupTransactionsByDate = () => {
+    // Créer un objet pour stocker les transactions groupées
+    const grouped = {};
+
+    transactions.forEach(transaction => {
+      // Extraire la date sans l'heure
+      const date = new Date(transaction.date);
+      const dateKey = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+      // Si cette date n'existe pas encore dans l'objet groupé, créer un tableau vide
+      if (!grouped[dateKey]) {
+        grouped[dateKey] = [];
+      }
+
+      // Ajouter la transaction au tableau correspondant à sa date
+      grouped[dateKey].push(transaction);
+    });
+
+    // Convertir l'objet en tableau pour FlatList
+    return Object.entries(grouped).map(([date, items]) => ({
+      date,
+      data: items
+    })).sort((a, b) => new Date(b.date) - new Date(a.date)); // Trier par date décroissante
+  };
+
+  // Formater la date pour l'affichage
   const formatDate = (dateString) => {
     const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Si c'est aujourd'hui
+    if (date.toDateString() === today.toDateString()) {
+      return "Aujourd'hui";
+    }
+
+    // Si c'est hier
+    if (date.toDateString() === yesterday.toDateString()) {
+      return "Hier";
+    }
+
+    // Sinon, formater la date
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'long',
+      year: 'numeric'
     });
   };
 
-  if (isLoading || !user) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#16a34a" />
-      </View>
-    );
-  }
+  const renderSectionHeader = ({ date }) => (
+    <View style={styles.sectionHeader}>
+      <ThemedText style={styles.sectionHeaderText}>{formatDate(date)}</ThemedText>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Card style={styles.pointsCard}>
-          <Card.Content style={styles.pointsContent}>
-            <View style={styles.pointsHeader}>
-              <Ionicons name="star" size={24} color="#16a34a" />
-              <Text style={styles.pointsHeaderText}>Solde actuel</Text>
-            </View>
-            <Text style={styles.pointsAmount}>{user.points}</Text>
-            <Text style={styles.pointsEquivalent}>
-              Équivalent à {Math.floor(user.points / 5).toLocaleString()} XAF
-            </Text>
-          </Card.Content>
-        </Card>
-
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressTitle}>Niveau {Math.floor(user.points / 500) + 1}</Text>
-          <View style={styles.progressBarContainer}>
-            <View
-              style={[
-                styles.progressBar,
-                { width: `${(user.points % 500) / 500 * 100}%` }
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {user.points % 500} / 500 points pour le niveau suivant
-          </Text>
-        </View>
-
-        <Button
-          mode="contained"
-          onPress={() => navigation.navigate('Withdraw')}
-          style={styles.withdrawButton}
-          icon="cash-multiple"
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
         >
-          Convertir mes points
-        </Button>
+          <Ionicons name="arrow-back" size={24} color={Colors[theme].text} />
+        </TouchableOpacity>
+        <ThemedText style={styles.headerTitle}>Historique des points</ThemedText>
+        <View style={styles.placeholder} />
+      </View>
 
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Statistiques</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Ionicons name="scan-outline" size={28} color="#3b82f6" />
-              <Text style={styles.statValue}>{user.scannedWaste}</Text>
-              <Text style={styles.statLabel}>Déchets</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="help-circle-outline" size={28} color="#8b5cf6" />
-              <Text style={styles.statValue}>{user.quizCompleted}</Text>
-              <Text style={styles.statLabel}>Quiz</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="calendar-outline" size={28} color="#f59e0b" />
-              <Text style={styles.statValue}>15</Text>
-              <Text style={styles.statLabel}>Jours</Text>
-            </View>
+      <View style={styles.summary}>
+        <View style={styles.summaryItem}>
+          <ThemedText style={styles.summaryValue}>{totalEarned}</ThemedText>
+          <ThemedText style={styles.summaryLabel}>Points gagnés</ThemedText>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryItem}>
+          <ThemedText style={styles.summaryValue}>{totalSpent}</ThemedText>
+          <ThemedText style={styles.summaryLabel}>Points dépensés</ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'all' && {backgroundColor: Colors[theme].primary}
+          ]}
+          onPress={() => setFilter('all')}
+        >
+          <ThemedText style={[
+            styles.filterButtonText,
+            filter === 'all' && styles.activeFilterText
+          ]}>Tous</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'earn' && {backgroundColor: Colors[theme].primary}
+          ]}
+          onPress={() => setFilter('earn')}
+        >
+          <ThemedText style={[
+            styles.filterButtonText,
+            filter === 'earn' && styles.activeFilterText
+          ]}>Gagnés</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'spend' && {backgroundColor: Colors[theme].primary}
+          ]}
+          onPress={() => setFilter('spend')}
+        >
+          <ThemedText style={[
+            styles.filterButtonText,
+            filter === 'spend' && styles.activeFilterText
+          ]}>Dépensés</ThemedText>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={groupTransactionsByDate()}
+        keyExtractor={(item) => item.date}
+        renderItem={({ item }) => (
+          <View>
+            {renderSectionHeader(item)}
+            {item.data.map((transaction) => (
+              <TransactionItem key={transaction.id} transaction={transaction} />
+            ))}
           </View>
-        </View>
-
-        <View style={styles.transactionsContainer}>
-          <Text style={styles.sectionTitle}>Historique des transactions</Text>
-          {transactions.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="document-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.emptyText}>Aucune transaction</Text>
-            </View>
-          ) : (
-            transactions.map((transaction, index) => (
-              <Card key={transaction.id} style={styles.transactionCard}>
-                <Card.Content style={styles.transactionContent}>
-                  <View style={[
-                    styles.transactionIconContainer,
-                    transaction.type === 'earning'
-                      ? styles.earningIcon
-                      : styles.withdrawalIcon
-                  ]}>
-                    <Ionicons
-                      name={transaction.type === 'earning' ? 'add' : 'remove'}
-                      size={20}
-                      color="#fff"
-                    />
-                  </View>
-
-                  <View style={styles.transactionDetails}>
-                    <Text style={styles.transactionTitle}>
-                      {transaction.type === 'earning'
-                        ? `Gain: ${transaction.details || 'Activité'}`
-                        : `Retrait: ${
-                            transaction.method === 'wm1'
-                              ? 'MTN Mobile Money'
-                              : transaction.method === 'wm2'
-                                ? 'Orange Money'
-                                : 'Carte Bancaire'
-                          }`
-                      }
-                    </Text>
-                    <Text style={styles.transactionDate}>
-                      {formatDate(transaction.timestamp)}
-                    </Text>
-                    {transaction.reference && (
-                      <Text style={styles.transactionReference}>
-                        Réf: {transaction.reference}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={styles.transactionValues}>
-                    <Text style={[
-                      styles.transactionPoints,
-                      transaction.type === 'earning'
-                        ? styles.earningText
-                        : styles.withdrawalText
-                    ]}>
-                      {transaction.type === 'earning' ? '+' : '-'}{transaction.points} points
-                    </Text>
-                    {transaction.amount > 0 && (
-                      <Text style={styles.transactionAmount}>
-                        {transaction.amount.toLocaleString()} XAF
-                      </Text>
-                    )}
-                    <View style={[
-                      styles.statusBadge,
-                      transaction.status === 'completed'
-                        ? styles.completedBadge
-                        : transaction.status === 'pending'
-                          ? styles.pendingBadge
-                          : styles.failedBadge
-                    ]}>
-                      <Text style={styles.statusText}>
-                        {transaction.status === 'completed'
-                          ? 'Complété'
-                          : transaction.status === 'pending'
-                            ? 'En attente'
-                            : 'Échoué'}
-                      </Text>
-                    </View>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))
-          )}
-        </View>
-      </ScrollView>
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+      />
     </SafeAreaView>
   );
 }
@@ -197,180 +263,88 @@ export default function PointsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  pointsCard: {
-    marginBottom: 16,
-    borderRadius: 8,
-  },
-  pointsContent: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  pointsHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  pointsHeaderText: {
-    fontSize: 16,
-    marginLeft: 8,
+  backButton: {
+    padding: 4,
   },
-  pointsAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#16a34a',
-    marginTop: 8,
-  },
-  pointsEquivalent: {
-    color: '#666',
-    marginTop: 4,
-  },
-  progressContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  progressTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#16a34a',
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  withdrawButton: {
-    marginBottom: 16,
-    backgroundColor: '#16a34a',
-  },
-  statsContainer: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
   },
-  statsGrid: {
+  placeholder: {
+    width: 24, // Pour équilibrer le bouton retour
+  },
+  summary: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: 'white',
     padding: 16,
+    borderRadius: 8,
+    margin: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  statItem: {
+  summaryItem: {
     flex: 1,
     alignItems: 'center',
   },
-  statValue: {
-    fontSize: 20,
+  summaryValue: {
+    fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 4,
+    marginBottom: 4,
   },
-  statLabel: {
-    color: '#666',
-    fontSize: 12,
+  summaryLabel: {
+    fontSize: 14,
+    opacity: 0.7,
   },
-  transactionsContainer: {
-    marginBottom: 24,
+  divider: {
+    width: 1,
+    backgroundColor: '#f0f0f0',
+    marginHorizontal: 16,
   },
-  emptyContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 24,
+  filterContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  filterButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    backgroundColor: '#f0f0f0',
     alignItems: 'center',
   },
-  emptyText: {
-    color: '#94a3b8',
+  filterButtonText: {
+    fontSize: 14,
+  },
+  activeFilterText: {
+    color: 'white',
+  },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  sectionHeader: {
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
     marginTop: 8,
   },
-  transactionCard: {
-    marginBottom: 8,
-    borderRadius: 8,
-  },
-  transactionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  transactionIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  earningIcon: {
-    backgroundColor: '#16a34a',
-  },
-  withdrawalIcon: {
-    backgroundColor: '#f97316',
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionTitle: {
-    fontWeight: '500',
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#666',
-  },
-  transactionReference: {
-    fontSize: 10,
-    color: '#94a3b8',
-  },
-  transactionValues: {
-    alignItems: 'flex-end',
-  },
-  transactionPoints: {
-    fontWeight: '500',
-  },
-  earningText: {
-    color: '#16a34a',
-  },
-  withdrawalText: {
-    color: '#f97316',
-  },
-  transactionAmount: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusBadge: {
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 10,
-  },
-  completedBadge: {
-    backgroundColor: '#f8fafc',
-  },
-  pendingBadge: {
-    backgroundColor: '#fef3c7',
-  },
-  failedBadge: {
-    backgroundColor: '#fee2e2',
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

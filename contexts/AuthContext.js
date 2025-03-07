@@ -1,143 +1,220 @@
-// app/contexts/AuthContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import mockData from '../constants/mockData';
+import React, { createContext, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-const AuthContext = createContext();
+export const AuthContext = createContext();
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
-    // Vérifier si un utilisateur est déjà connecté
-    const checkUser = async () => {
-      try {
-        const userString = await AsyncStorage.getItem('user');
-        if (userString) {
-          const userData = JSON.parse(userString);
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkUser();
+    // Vérifier si l'utilisateur est déjà connecté au chargement de l'application
+    checkAuthStatus();
   }, []);
 
-  const login = async (email, password) => {
+  // Vérifier s'il existe un token d'authentification stocké
+  const checkAuthStatus = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      // Dans une application réelle, vous récupéreriez un token JWT stocké
+      const storedToken = await SecureStore.getItemAsync('userToken');
 
-      // Simuler une authentification
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (storedToken) {
+        // Vérifier la validité du token et récupérer les informations de l'utilisateur
+        // Dans cet exemple, nous simulons une vérification réussie
+        setToken(storedToken);
 
-      // Pour la démo, on accepte n'importe quel email/mot de passe
-      // et on utilise le premier utilisateur des données mockées
-      const userData = mockData.users[0];
+        // Simuler l'obtention des données utilisateur à partir d'une API
+        const mockUser = {
+          id: '123',
+          name: 'Alex Dupont',
+          email: 'alex.dupont@example.com',
+          phone: '+33 6 12 34 56 78',
+          avatar: 'https://via.placeholder.com/150',
+          points: 750,
+          level: 'Éco-héros',
+          joinDate: '2024-09-15',
+        };
 
-      // Stocker l'utilisateur dans AsyncStorage
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
-
-      // Mettre à jour l'état
-      setUser(userData);
-      return userData;
+        setUser(mockUser);
+        setIsAuthenticated(true);
+      }
     } catch (error) {
-      setError(error.message || 'Une erreur est survenue lors de la connexion');
-      throw error;
+      console.error('Erreur lors de la vérification de l\'authentification:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (userData) => {
+  // Connexion utilisateur
+  const login = async (email, password) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      // Dans une application réelle, vous feriez un appel API pour authentifier l'utilisateur
+      // et obtenir un token JWT
 
-      // Simuler une inscription
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Créer un nouvel utilisateur
-      const newUser = {
-        id: `u${Date.now()}`,
-        name: userData.name,
-        email: userData.email,
-        points: 0,
-        scannedWaste: 0,
-        quizCompleted: 0,
-        avatarUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-        joinedDate: new Date().toISOString(),
-        preferences: {
-          notifications: true,
-          darkMode: false,
-          language: 'fr'
+      // Simulons une réponse d'API
+      const mockResponse = {
+        success: true,
+        token: 'mock_jwt_token_123456789',
+        user: {
+          id: '123',
+          name: 'Alex Dupont',
+          email: email,
+          phone: '+33 6 12 34 56 78',
+          avatar: 'https://via.placeholder.com/150',
+          points: 750,
+          level: 'Éco-héros',
+          joinDate: '2024-09-15',
         }
       };
 
-      // Stocker l'utilisateur dans AsyncStorage
-      await AsyncStorage.setItem('user', JSON.stringify(newUser));
+      if (mockResponse.success) {
+        // Stocker le token dans le stockage sécurisé
+        await SecureStore.setItemAsync('userToken', mockResponse.token);
 
-      // Mettre à jour l'état
-      setUser(newUser);
-      return newUser;
+        // Mettre à jour l'état
+        setToken(mockResponse.token);
+        setUser(mockResponse.user);
+        setIsAuthenticated(true);
+
+        return { success: true };
+      } else {
+        return {
+          success: false,
+          message: 'Identifiants incorrects. Veuillez réessayer.'
+        };
+      }
     } catch (error) {
-      setError(error.message || 'Une erreur est survenue lors de l\'inscription');
-      throw error;
+      console.error('Erreur lors de la connexion:', error);
+      return {
+        success: false,
+        message: 'Une erreur est survenue. Veuillez réessayer plus tard.'
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Inscription utilisateur
+  const register = async (userData) => {
+    setIsLoading(true);
+    try {
+      // Dans une application réelle, vous feriez un appel API pour créer un nouvel utilisateur
+
+      // Simulons une réponse d'API
+      const mockResponse = {
+        success: true,
+        message: 'Inscription réussie'
+      };
+
+      return mockResponse;
+    } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      return {
+        success: false,
+        message: 'Une erreur est survenue. Veuillez réessayer plus tard.'
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Déconnexion utilisateur
   const logout = async () => {
     try {
-      setIsLoading(true);
-      // Supprimer l'utilisateur d'AsyncStorage
-      await AsyncStorage.removeItem('user');
+      // Supprimer le token du stockage sécurisé
+      await SecureStore.deleteItemAsync('userToken');
+
       // Réinitialiser l'état
+      setToken(null);
       setUser(null);
+      setIsAuthenticated(false);
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('Erreur lors de la déconnexion:', error);
+      Alert.alert(
+        'Erreur',
+        'Une erreur est survenue lors de la déconnexion. Veuillez réessayer.'
+      );
+    }
+  };
+
+  // Mise à jour du profil utilisateur
+  const updateProfile = async (updatedData) => {
+    setIsLoading(true);
+    try {
+      // Dans une application réelle, vous feriez un appel API pour mettre à jour les informations de l'utilisateur
+
+      // Simulons une mise à jour réussie
+      const updatedUser = { ...user, ...updatedData };
+      setUser(updatedUser);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      return {
+        success: false,
+        message: 'Une erreur est survenue. Veuillez réessayer plus tard.'
+      };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateUser = async (userData) => {
+  // Réinitialisation du mot de passe
+  const resetPassword = async (email) => {
     try {
-      setIsLoading(true);
-      // Mettre à jour l'utilisateur dans AsyncStorage
-      const updatedUser = { ...user, ...userData };
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
-      // Mettre à jour l'état
-      setUser(updatedUser);
-      return updatedUser;
+      // Dans une application réelle, vous feriez un appel API pour envoyer un email de réinitialisation
+
+      // Simulons une réponse d'API
+      return {
+        success: true,
+        message: 'Un email de réinitialisation a été envoyé à votre adresse email.'
+      };
     } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
+      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+      return {
+        success: false,
+        message: 'Une erreur est survenue. Veuillez réessayer plus tard.'
+      };
+    }
+  };
+
+  // Vérifier si le token est valide
+  const verifyToken = async () => {
+    try {
+      // Dans une application réelle, vous feriez un appel API pour vérifier la validité du token
+
+      // Simulons une vérification réussie
+      return true;
+    } catch (error) {
+      console.error('Erreur lors de la vérification du token:', error);
+      return false;
     }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isLoading,
-      error,
-      login,
-      register,
-      logout,
-      updateUser
-    }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        isLoading,
+        user,
+        token,
+        login,
+        register,
+        logout,
+        updateProfile,
+        resetPassword,
+        verifyToken,
+        checkAuthStatus
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export default AuthProvider;

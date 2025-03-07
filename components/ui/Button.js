@@ -1,159 +1,149 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { colors } from '../../constants/theme';
+import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import ThemedText from '../ThemedText';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
-export default function Button({
+const Button = ({
   title,
   onPress,
-  variant = 'filled',
-  size = 'medium',
-  disabled = false,
-  loading = false,
-  icon,
   style,
   textStyle,
-  ...props
-}) {
-  const getContainerStyle = () => {
-    let baseStyle = [styles.container];
+  icon,
+  iconPosition = 'left',
+  variant = 'primary',
+  disabled = false,
+  loading = false,
+  loadingText = 'Chargement...',
+  children,
+}) => {
+  const { theme } = useTheme();
 
-    // Variant
-    if (variant === 'filled') {
-      baseStyle.push(styles.filledContainer);
-    } else if (variant === 'outlined') {
-      baseStyle.push(styles.outlinedContainer);
-    } else if (variant === 'text') {
-      baseStyle.push(styles.textContainer);
+  // Déterminer les styles de base du bouton en fonction de la variante
+  const getButtonStyle = () => {
+    switch (variant) {
+      case 'secondary':
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: Colors[theme].primary,
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: '#ddd',
+        };
+      case 'danger':
+        return {
+          backgroundColor: Colors[theme].error,
+        };
+      case 'success':
+        return {
+          backgroundColor: Colors[theme].success,
+        };
+      case 'primary':
+      default:
+        return {
+          backgroundColor: Colors[theme].primary,
+        };
     }
-
-    // Size
-    if (size === 'small') {
-      baseStyle.push(styles.smallContainer);
-    } else if (size === 'large') {
-      baseStyle.push(styles.largeContainer);
-    }
-
-    // Disabled
-    if (disabled) {
-      baseStyle.push(styles.disabledContainer);
-    }
-
-    // Custom style
-    if (style) {
-      baseStyle.push(style);
-    }
-
-    return baseStyle;
   };
 
-  const getTextStyle = () => {
-    let baseStyle = [styles.text];
-
-    // Variant
-    if (variant === 'filled') {
-      baseStyle.push(styles.filledText);
-    } else if (variant === 'outlined') {
-      baseStyle.push(styles.outlinedText);
-    } else if (variant === 'text') {
-      baseStyle.push(styles.textOnlyText);
+  // Déterminer la couleur du texte en fonction de la variante
+  const getTextColor = () => {
+    switch (variant) {
+      case 'secondary':
+      case 'outline':
+        return Colors[theme].primary;
+      case 'primary':
+      case 'danger':
+      case 'success':
+      default:
+        return '#fff';
     }
-
-    // Size
-    if (size === 'small') {
-      baseStyle.push(styles.smallText);
-    } else if (size === 'large') {
-      baseStyle.push(styles.largeText);
-    }
-
-    // Disabled
-    if (disabled) {
-      baseStyle.push(styles.disabledText);
-    }
-
-    // Custom text style
-    if (textStyle) {
-      baseStyle.push(textStyle);
-    }
-
-    return baseStyle;
   };
 
   return (
     <TouchableOpacity
-      style={getContainerStyle()}
+      style={[
+        styles.button,
+        getButtonStyle(),
+        disabled && styles.disabledButton,
+        style,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
-      {...props}
+      activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'filled' ? '#fff' : colors.primary} />
+        <>
+          <ActivityIndicator size="small" color={getTextColor()} style={styles.loadingIndicator} />
+          {loadingText && (
+            <ThemedText style={[styles.buttonText, { color: getTextColor() }, textStyle]}>
+              {loadingText}
+            </ThemedText>
+          )}
+        </>
       ) : (
         <>
-          {icon && <View style={styles.iconContainer}>{icon}</View>}
-          <Text style={getTextStyle()}>{title}</Text>
+          {icon && iconPosition === 'left' && (
+            <Ionicons
+              name={icon}
+              size={20}
+              color={getTextColor()}
+              style={styles.iconLeft}
+            />
+          )}
+
+          {children || (
+            <ThemedText style={[styles.buttonText, { color: getTextColor() }, textStyle]}>
+              {title}
+            </ThemedText>
+          )}
+
+          {icon && iconPosition === 'right' && (
+            <Ionicons
+              name={icon}
+              size={20}
+              color={getTextColor()}
+              style={styles.iconRight}
+            />
+          )}
         </>
       )}
     </TouchableOpacity>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingVertical: 10,
     borderRadius: 8,
+    minHeight: 48,
   },
-  filledContainer: {
-    backgroundColor: colors.primary,
-  },
-  outlinedContainer: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  textContainer: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 8,
-  },
-  smallContainer: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  largeContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  disabledContainer: {
-    opacity: 0.5,
-  },
-  text: {
+  buttonText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
-  filledText: {
-    color: '#fff',
+  disabledButton: {
+    opacity: 0.5,
   },
-  outlinedText: {
-    color: colors.primary,
+  iconLeft: {
+    marginRight: 8,
   },
-  textOnlyText: {
-    color: colors.primary,
+  iconRight: {
+    marginLeft: 8,
   },
-  smallText: {
-    fontSize: 14,
-  },
-  largeText: {
-    fontSize: 18,
-  },
-  disabledText: {
-    opacity: 0.8,
-  },
-  iconContainer: {
+  loadingIndicator: {
     marginRight: 8,
   },
 });
+
+export default Button;

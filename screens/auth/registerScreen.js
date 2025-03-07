@@ -1,305 +1,233 @@
-// app/(auth)/register.js
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import mockData from '../../constants/mockData';
-
-// Composants UI
-import Input from '../../components/ui/Input';
+import ThemedText from '../../components/ThemedText';
 import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
-
-  // État du formulaire
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    agreeTerms: false
-  });
-
+  const { theme } = useTheme();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [hidePassword, setHidePassword] = useState(true);
+  const [hideConfirmPassword, setHideConfirmPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [errors, setErrors] = useState({});
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
-  // Modification des champs du formulaire
-  const handleChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const validateForm = () => {
+    const newErrors = {};
 
-    // Évaluer la force du mot de passe si le champ modifié est le mot de passe
-    if (field === 'password') {
-      evaluatePasswordStrength(value);
-    }
-  };
+    if (!name.trim()) newErrors.name = 'Le nom est requis';
 
-  // Évaluation de la force du mot de passe
-  const evaluatePasswordStrength = (password) => {
-    let strength = 0;
-
-    if (password.length >= 8) strength += 1;
-    if (/[A-Z]/.test(password)) strength += 1;
-    if (/[a-z]/.test(password)) strength += 1;
-    if (/[0-9]/.test(password)) strength += 1;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
-
-    setPasswordStrength(strength);
-  };
-
-  // Obtenir la couleur de la force du mot de passe
-  const getStrengthColor = () => {
-    if (passwordStrength < 2) return '#ef4444'; // Faible - Rouge
-    if (passwordStrength < 4) return '#f59e0b'; // Moyen - Orange
-    return '#16a34a'; // Fort - Vert
-  };
-
-  // Obtenir le texte de la force du mot de passe
-  const getStrengthText = () => {
-    if (passwordStrength < 2) return 'Faible';
-    if (passwordStrength < 4) return 'Moyen';
-    return 'Fort';
-  };
-
-  // Soumettre le formulaire d'inscription
-  const handleSubmit = async () => {
-    try {
-      // Validation basique
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
-        setError('Tous les champs sont obligatoires');
-        return;
-      }
-
-      // Validation du format de l'email
+    if (!email) {
+      newErrors.email = 'L\'email est requis';
+    } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        setError('Adresse email invalide');
-        return;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Format d\'email invalide';
       }
-
-      // Validation de la correspondance des mots de passe
-      if (formData.password !== formData.confirmPassword) {
-        setError('Les mots de passe ne correspondent pas');
-        return;
-      }
-
-      // Validation de la force du mot de passe
-      if (passwordStrength < 3) {
-        setError('Votre mot de passe est trop faible');
-        return;
-      }
-
-      // Validation des conditions d'utilisation
-      if (!formData.agreeTerms) {
-        setError('Vous devez accepter les conditions d\'utilisation');
-        return;
-      }
-
-      setIsLoading(true);
-
-      // Simuler une requête à l'API d'inscription
-      setTimeout(async () => {
-        // Création d'un nouvel utilisateur pour la démo
-        const newUser = {
-          id: `u${Date.now()}`,
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          points: 0,
-          scannedWaste: 0,
-          quizCompleted: 0,
-          avatarUrl: 'https://randomuser.me/api/portraits/men/1.jpg',
-          joinedDate: new Date().toISOString(),
-          preferences: {
-            notifications: true,
-            darkMode: false,
-            language: 'fr'
-          }
-        };
-
-        // Dans une application réelle, on enverrait les données à un backend
-        // Ici, on va simplement stocker localement pour la démo
-        try {
-          await AsyncStorage.setItem('user', JSON.stringify(newUser));
-
-          // Afficher un message de succès
-          Alert.alert(
-            "Inscription réussie !",
-            "Votre compte a été créé avec succès.",
-            [
-              { text: "OK", onPress: () => router.replace('/(tabs)/home') }
-            ]
-          );
-        } catch (storageError) {
-          console.error('Erreur de stockage:', storageError);
-          setError('Une erreur est survenue lors de la création du compte');
-        }
-
-        setIsLoading(false);
-      }, 1500);
-
-    } catch (error) {
-      console.error('Erreur d\'inscription:', error);
-      setError('Une erreur inattendue est survenue');
-      setIsLoading(false);
     }
+
+    if (phone) {
+      const phoneRegex = /^\+?[0-9]{10,15}$/;
+      if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+        newErrors.phone = 'Format de numéro de téléphone invalide';
+      }
+    }
+
+    if (!password) {
+      newErrors.password = 'Le mot de passe est requis';
+    } else if (password.length < 6) {
+      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Veuillez confirmer votre mot de passe';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    }
+
+    if (!acceptTerms) {
+      newErrors.terms = 'Vous devez accepter les conditions d\'utilisation';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegister = () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    // Simuler un appel API
+    setTimeout(() => {
+      setIsLoading(false);
+
+      // Dans une vraie application, vous enregistreriez l'utilisateur ici
+
+      Alert.alert(
+        'Inscription réussie',
+        'Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.push('/auth/login'),
+          },
+        ]
+      );
+    }, 1500);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color={Colors[theme].text} />
+            </TouchableOpacity>
+            <ThemedText style={styles.headerTitle}>Inscription</ThemedText>
+            <View style={styles.placeholder} />
+          </View>
 
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>
-            Rejoignez EcoWaste et commencez à transformer vos déchets en opportunités
-          </Text>
-
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={20} color="#ef4444" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.form}>
-            <View style={styles.nameRow}>
-              <Input
-                label="Prénom"
-                value={formData.firstName}
-                onChangeText={(value) => handleChange('firstName', value)}
-                placeholder="Jean"
-                style={styles.nameInput}
-              />
-
-              <Input
-                label="Nom"
-                value={formData.lastName}
-                onChangeText={(value) => handleChange('lastName', value)}
-                placeholder="Dupont"
-                style={styles.nameInput}
-              />
-            </View>
+          <View style={styles.formContainer}>
+            <Input
+              label="Nom complet"
+              placeholder="Entrez votre nom"
+              value={name}
+              onChangeText={setName}
+              icon="person-outline"
+              error={errors.name}
+              autoCapitalize="words"
+            />
 
             <Input
               label="Email"
-              value={formData.email}
-              onChangeText={(value) => handleChange('email', value)}
-              placeholder="jean.dupont@exemple.com"
+              placeholder="Entrez votre email"
+              value={email}
+              onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              icon="mail-outline"
+              error={errors.email}
             />
 
             <Input
-              label="Mot de passe"
-              value={formData.password}
-              onChangeText={(value) => handleChange('password', value)}
-              placeholder="••••••••"
-              secureTextEntry
+              label="Téléphone (optionnel)"
+              placeholder="Entrez votre numéro de téléphone"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              icon="call-outline"
+              error={errors.phone}
             />
 
-            {formData.password ? (
-              <View style={styles.passwordStrength}>
-                <View style={styles.strengthBar}>
-                  <View
-                    style={[
-                      styles.strengthIndicator,
-                      {
-                        width: `${passwordStrength * 20}%`,
-                        backgroundColor: getStrengthColor()
-                      }
-                    ]}
-                  />
-                </View>
-                <Text style={styles.strengthText}>
-                  Force: <Text style={{ color: getStrengthColor() }}>{getStrengthText()}</Text>
-                </Text>
-              </View>
-            ) : null}
+            <View style={styles.passwordContainer}>
+              <Input
+                label="Mot de passe"
+                placeholder="Créez votre mot de passe"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={hidePassword}
+                icon="lock-closed-outline"
+                error={errors.password}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setHidePassword(!hidePassword)}
+              >
+                <Ionicons
+                  name={hidePassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={24}
+                  color={Colors[theme].text}
+                />
+              </TouchableOpacity>
+            </View>
 
-            <Input
-              label="Confirmer le mot de passe"
-              value={formData.confirmPassword}
-              onChangeText={(value) => handleChange('confirmPassword', value)}
-              placeholder="••••••••"
-              secureTextEntry
-            />
+            <View style={styles.passwordContainer}>
+              <Input
+                label="Confirmer le mot de passe"
+                placeholder="Confirmez votre mot de passe"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={hideConfirmPassword}
+                icon="lock-closed-outline"
+                error={errors.confirmPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setHideConfirmPassword(!hideConfirmPassword)}
+              >
+                <Ionicons
+                  name={hideConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={24}
+                  color={Colors[theme].text}
+                />
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
-              style={styles.termsRow}
-              onPress={() => handleChange('agreeTerms', !formData.agreeTerms)}
-              activeOpacity={0.7}
+              style={styles.termsContainer}
+              onPress={() => setAcceptTerms(!acceptTerms)}
             >
-              <View style={styles.checkbox}>
-                {formData.agreeTerms && (
-                  <Ionicons name="checkmark" size={16} color="#16a34a" />
-                )}
+              <View style={styles.checkboxContainer}>
+                <View style={[
+                  styles.checkbox,
+                  acceptTerms && styles.checkboxChecked
+                ]}>
+                  {acceptTerms && (
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                  )}
+                </View>
               </View>
-              <Text style={styles.termsText}>
-                J'accepte les{' '}
-                <Text style={styles.termsLink}>conditions d'utilisation</Text>
-                {' '}et la{' '}
-                <Text style={styles.termsLink}>politique de confidentialité</Text>
-              </Text>
+              <ThemedText style={styles.termsText}>
+                J'accepte les <ThemedText style={styles.termsLink}>conditions d'utilisation</ThemedText> et la <ThemedText style={styles.termsLink}>politique de confidentialité</ThemedText>
+              </ThemedText>
             </TouchableOpacity>
 
+            {errors.terms && (
+              <ThemedText style={styles.termsError}>{errors.terms}</ThemedText>
+            )}
+
             <Button
-              title={isLoading ? "Création en cours..." : "Créer un compte"}
-              onPress={handleSubmit}
-              disabled={isLoading}
+              title="S'inscrire"
+              onPress={handleRegister}
               loading={isLoading}
               style={styles.registerButton}
             />
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
-                <Ionicons name="logo-google" size={20} color="#fff" />
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={[styles.socialButton, styles.facebookButton]}>
-                <Ionicons name="logo-facebook" size={20} color="#fff" />
-                <Text style={styles.socialButtonText}>Facebook</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Vous avez déjà un compte ?</Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={styles.footerLink}>Se connecter</Text>
+          <View style={styles.loginContainer}>
+            <ThemedText style={styles.loginText}>
+              Déjà un compte ?
+            </ThemedText>
+            <TouchableOpacity onPress={() => router.push('/auth/login')}>
+              <ThemedText style={styles.loginLink}>
+                Se connecter
+              </ThemedText>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -307,156 +235,100 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    position: 'relative',
+    justifyContent: 'space-between',
+    marginVertical: 16,
   },
   backButton: {
-    position: 'absolute',
-    left: 16,
-    top: 16,
-    zIndex: 10,
+    padding: 4,
   },
-  logo: {
-    width: 60,
-    height: 60,
-  },
-  content: {
-    padding: 20,
-  },
-  title: {
+  headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+  placeholder: {
+    width: 24, // Pour équilibrer le bouton retour
+  },
+  formContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  errorContainer: {
+  passwordContainer: {
+    position: 'relative',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: '55%',
+  },
+  termsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    marginVertical: 16,
   },
-  errorText: {
-    color: '#ef4444',
-    marginLeft: 8,
-    flex: 1,
-  },
-  form: {
-    marginBottom: 24,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nameInput: {
-    flex: 0.48,
-  },
-  passwordStrength: {
-    marginTop: -8,
-    marginBottom: 16,
-  },
-  strengthBar: {
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  strengthIndicator: {
-    height: '100%',
-  },
-  strengthText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+  checkboxContainer: {
+    marginRight: 8,
   },
   checkbox: {
     width: 20,
     height: 20,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 4,
-    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.light.primary,
   },
   termsText: {
     flex: 1,
     fontSize: 14,
-    color: '#666',
   },
   termsLink: {
-    color: '#16a34a',
+    color: Colors.light.primary,
+    fontWeight: '500',
+  },
+  termsError: {
+    fontSize: 14,
+    color: Colors.light.error,
+    marginTop: -8,
+    marginBottom: 8,
+    marginLeft: 28,
   },
   registerButton: {
-    backgroundColor: '#16a34a',
+    marginTop: 8,
   },
-  divider: {
+  loginContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    color: '#6b7280',
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
-    flex: 0.48,
+    alignItems: 'center',
+    marginVertical: 16,
   },
-  googleButton: {
-    backgroundColor: '#ea4335',
+  loginText: {
+    fontSize: 16,
   },
-  facebookButton: {
-    backgroundColor: '#3b5998',
-  },
-  socialButtonText: {
-    color: '#fff',
+  loginLink: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
     marginLeft: 8,
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#6b7280',
-  },
-  footerLink: {
-    color: '#16a34a',
-    fontWeight: '500',
-    marginLeft: 4,
   },
 });

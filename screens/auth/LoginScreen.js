@@ -1,110 +1,156 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
+import ThemedText from '../../components/ThemedText';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
+import { useTheme } from '../../hooks/useTheme';
+import Colors from '../../constants/Colors';
 
-export default function LoginScreen({ navigation, setIsAuthenticated }) {
+export default function LoginScreen() {
+  const router = useRouter();
+  const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [hidePassword, setHidePassword] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Veuillez remplir tous les champs');
-      return;
-    }
+  const validateForm = () => {
+    const newErrors = {};
+    if (!email) newErrors.email = 'L\'email est requis';
+    if (!password) newErrors.password = 'Le mot de passe est requis';
 
-    setLoading(true);
-    setError('');
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
-    // Simuler l'authentification
+  const handleLogin = () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    // Simuler un appel API
     setTimeout(() => {
-      // Pour les besoins de la démo, accepter n'importe quel email/mot de passe
-      setIsAuthenticated(true);
-      setLoading(false);
+      setIsLoading(false);
+
+      // Dans une vraie application, vous devriez vérifier la réponse de l'API
+      // et stocker le token d'authentification
+
+      // Rediriger vers l'écran principal
+      router.replace('/home');
     }, 1500);
+  };
+
+  const goToRegister = () => {
+    router.push('/auth/register');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../../assets/logo.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.appName}>EcoWaste</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Connexion</Text>
-
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={20} color="#ef4444" />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
-        <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="votre.email@exemple.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-
-        <Input
-          label="Mot de passe"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="••••••••"
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={styles.forgotPassword}
-          onPress={() => navigation.navigate('ForgotPassword')}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-        </TouchableOpacity>
+          <View style={styles.logoContainer}>
+            <Image
+              source={{ uri: 'https://via.placeholder.com/150' }}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <ThemedText style={styles.appName}>EcoSmart</ThemedText>
+            <ThemedText style={styles.tagline}>Recyclons ensemble pour un futur durable</ThemedText>
+          </View>
 
-        <Button
-          title={loading ? "Connexion en cours..." : "Se connecter"}
-          onPress={handleLogin}
-          loading={loading}
-          style={styles.loginButton}
-        />
+          <View style={styles.formContainer}>
+            <ThemedText style={styles.formTitle}>Connexion</ThemedText>
 
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>ou</Text>
-          <View style={styles.dividerLine} />
-        </View>
+            <Input
+              label="Email"
+              placeholder="Entrez votre email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              icon="mail-outline"
+              error={errors.email}
+            />
 
-        <View style={styles.socialButtons}>
-          <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
-            <Ionicons name="logo-google" size={20} color="#fff" />
-            <Text style={styles.socialButtonText}>Google</Text>
-          </TouchableOpacity>
+            <View style={styles.passwordContainer}>
+              <Input
+                label="Mot de passe"
+                placeholder="Entrez votre mot de passe"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={hidePassword}
+                icon="lock-closed-outline"
+                error={errors.password}
+              />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setHidePassword(!hidePassword)}
+              >
+                <Ionicons
+                  name={hidePassword ? 'eye-outline' : 'eye-off-outline'}
+                  size={24}
+                  color={Colors[theme].text}
+                />
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity style={[styles.socialButton, styles.facebookButton]}>
-            <Ionicons name="logo-facebook" size={20} color="#fff" />
-            <Text style={styles.socialButtonText}>Facebook</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <TouchableOpacity
+              style={styles.forgotPasswordLink}
+              onPress={() => {}}
+            >
+              <ThemedText style={styles.forgotPasswordText}>
+                Mot de passe oublié ?
+              </ThemedText>
+            </TouchableOpacity>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Pas encore de compte ?</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.footerLink}>Créer un compte</Text>
-        </TouchableOpacity>
-      </View>
+            <Button
+              title="Se connecter"
+              onPress={handleLogin}
+              loading={isLoading}
+              style={styles.loginButton}
+            />
+
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <ThemedText style={styles.dividerText}>OU</ThemedText>
+              <View style={styles.divider} />
+            </View>
+
+            <View style={styles.socialButtonsContainer}>
+              <TouchableOpacity style={[styles.socialButton, styles.googleButton]}>
+                <Ionicons name="logo-google" size={20} color="#fff" />
+                <ThemedText style={styles.socialButtonText}>Google</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={[styles.socialButton, styles.facebookButton]}>
+                <Ionicons name="logo-facebook" size={20} color="#fff" />
+                <ThemedText style={styles.socialButtonText}>Facebook</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.registerContainer}>
+            <ThemedText style={styles.registerText}>
+              Pas encore de compte ?
+            </ThemedText>
+            <TouchableOpacity onPress={goToRegister}>
+              <ThemedText style={styles.registerLink}>
+                S'inscrire
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -112,71 +158,85 @@ export default function LoginScreen({ navigation, setIsAuthenticated }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 16,
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+    marginVertical: 40,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 100,
+    marginBottom: 16,
   },
   appName: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#16a34a',
-    marginTop: 8,
+    marginBottom: 8,
+  },
+  tagline: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
   },
   formContainer: {
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  formTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
     textAlign: 'center',
   },
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+  passwordContainer: {
+    position: 'relative',
   },
-  errorText: {
-    color: '#ef4444',
-    marginLeft: 8,
-    flex: 1,
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: '55%',
   },
-  forgotPassword: {
+  forgotPasswordLink: {
     alignSelf: 'flex-end',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   forgotPasswordText: {
-    color: '#16a34a',
+    color: Colors.light.primary,
+    fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#16a34a',
+    marginVertical: 16,
   },
-  divider: {
+  dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 20,
   },
-  dividerLine: {
+  divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#ddd',
   },
   dividerText: {
     paddingHorizontal: 16,
-    color: '#6b7280',
+    fontSize: 14,
+    opacity: 0.7,
   },
-  socialButtons: {
+  socialButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -189,27 +249,30 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   googleButton: {
-    backgroundColor: '#ea4335',
+    backgroundColor: '#DB4437',
   },
   facebookButton: {
-    backgroundColor: '#3b5998',
+    backgroundColor: '#4267B2',
   },
   socialButtonText: {
-    color: '#fff',
-    marginLeft: 8,
+    color: 'white',
     fontWeight: '500',
+    marginLeft: 8,
   },
-  footer: {
+  registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 32,
   },
-  footerText: {
-    color: '#6b7280',
+  registerText: {
+    fontSize: 16,
   },
-  footerLink: {
-    color: '#16a34a',
-    fontWeight: '500',
-    marginLeft: 4,
+  registerLink: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: Colors.light.primary,
+    marginLeft: 8,
   },
 });
