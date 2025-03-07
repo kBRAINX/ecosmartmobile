@@ -9,12 +9,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cette application utilise l'appareil photo pour scanner les déchets",
+        "NSLocationWhenInUseUsageDescription": "Cette application utilise votre position pour trouver les points de collecte à proximité",
+        "NSPhotoLibraryUsageDescription": "Cette application accède à votre galerie pour importer des images de déchets"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#ffffff",
+        "versionCode": 1,
+        "permissions": [
+          "CAMERA",
+          "ACCESS_FINE_LOCATION",
+          "ACCESS_COARSE_LOCATION",
+          "READ_EXTERNAL_STORAGE",
+          "WRITE_EXTERNAL_STORAGE"
+        ]
       }
     },
     "web": {
@@ -31,6 +45,24 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Autorisez l'application à accéder à votre appareil photo pour scanner les déchets."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Autorisez l'application à accéder à votre position pour trouver les points de collecte à proximité."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Autorisez l'application à accéder à vos photos pour importer des images de déchets."
         }
       ]
     ],
